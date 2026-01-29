@@ -30,6 +30,7 @@ setup(
             'foot_contact_processor = gz_sim_launcher.foot_contact_processor:main',
             'force_visualizer = gz_sim_launcher.force_visualizer:main',
             'unitree_legged_control = gz_sim_launcher.unitree_legged_control:main',
+            'policy_action_controller = gz_sim_launcher.policy_action_controller:main',
         ],
     },
 )
