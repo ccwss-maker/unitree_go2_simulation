@@ -43,10 +43,10 @@ DEFAULT_POS_ROS2 = [
 ]
 
 PMSM = 0x0A          # 位置控制模式
-CMD_HZ = 50.0        # 命令发送频率
-KP = 50.0            # 位置增益
-KD = 2.0             # 速度增益
-INIT_DURATION = 5.0  # 初始化阶段持续时间（秒）
+CMD_HZ = 100.0        # 命令发送频率
+KP = 25.0            # 位置增益
+KD = 0.5             # 速度增益
+INIT_DURATION = 1.0  # 初始化阶段持续时间（秒）
 
 
 class PolicyActionController(Node):

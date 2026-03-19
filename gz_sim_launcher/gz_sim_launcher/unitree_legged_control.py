@@ -35,9 +35,6 @@ JOINT_NAMES = [
     'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint',
     'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint',
 ]
-# JOINT_NAMES = [
-#     'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint',
-# ]
 
 def _joint_type(joint_name: str) -> str:
     if 'hip' in joint_name:
