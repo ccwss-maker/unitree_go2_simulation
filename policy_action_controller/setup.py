@@ -13,15 +13,16 @@ setup(
     packages=[],
     package_dir={'': 'script'},
     py_modules=[
-        'joint_target_error_printer',
+        'backend_factory',
+        'control_config',
         'lowcmd_controller',
         'motion_mode_manager',
-        'motion_mode_test_client',
         'observation_builder',
         'policy_runner',
         'policy_scheduler',
-        'simcmd_controller',
-        'sim_motor_controller',
+        'scheduler_runtime',
+        'sim2real_backend',
+        'sim2sim_backend',
     ],
     data_files=[
         (
@@ -33,9 +34,7 @@ setup(
         (join('share', package_name, 'model'), glob('model/*')),
     ],
     scripts=[
-        join('script', 'joint_target_error_printer.py'),
         join('script', 'motion_mode_manager.py'),
-        join('script', 'motion_mode_test_client.py'),
         join('script', 'policy_scheduler.py'),
     ],
     install_requires=['setuptools'],
