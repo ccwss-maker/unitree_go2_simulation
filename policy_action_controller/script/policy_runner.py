@@ -76,10 +76,10 @@ class PolicyRunner:
             return (
                 Path(get_package_share_directory("policy_action_controller"))
                 / "model"
-                / "model_3950.pt"
+                / "model_9750.pt"
             )
         except PackageNotFoundError:
-            return Path(__file__).resolve().parents[1] / "model" / "model_3950.pt"
+            return Path(__file__).resolve().parents[1] / "model" / "model_9750.pt"
 
     def infer_action(self, observation: Sequence[float]) -> list[float]:
         if len(observation) != 48:
@@ -109,22 +109,22 @@ class PolicyRunner:
         if len(action) != 12:
             raise ValueError("action must contain 12 values")
 
-        clipped_action = [max(-1.0, min(1.0, float(value))) for value in action]
+        raw_action = [float(value) for value in action]
         target_joint_angles = list(self.default_joint_angles)
         for policy_idx, base_idx in enumerate(self.policy_order_indices):
             if base_idx < 0 or base_idx >= 12:
                 raise ValueError("policy_order_indices must contain indices in [0, 11]")
             target_joint_angles[base_idx] = float(
-                self.default_joint_angles[base_idx] + self.action_scale * clipped_action[policy_idx]
+                self.default_joint_angles[base_idx] + self.action_scale * raw_action[policy_idx]
             )
             target_joint_angles[base_idx] = max(
                 self.hard_lower_limits[base_idx],
                 min(self.hard_upper_limits[base_idx], target_joint_angles[base_idx]),
             )
 
-        self._last_action = list(clipped_action)
+        self._last_action = list(raw_action)
         self._target_joint_angles = target_joint_angles
-        return list(self._target_joint_angles), list(clipped_action)
+        return list(self._target_joint_angles), list(raw_action)
 
     def infer_target_joint_angles(
         self, observation: Sequence[float]

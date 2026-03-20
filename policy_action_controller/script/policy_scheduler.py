@@ -51,7 +51,6 @@ class PolicyScheduler(Node):
         self._base_angular_velocity = [0.0] * 3
         self._rpy = [0.0] * 3
         self._cmd_vel = [0.0] * 3
-        self._heading_target: float | None = None
         self._has_motion_state = False
         self._has_imu = False
         self._has_odom = False
@@ -59,12 +58,6 @@ class PolicyScheduler(Node):
         self._policy_active = False
         self._last_wait_log_time = 0.0
         self._last_missing_joint_warning_time = 0.0
-        self.heading_control_stiffness = float(
-            self.declare_parameter('heading_control_stiffness', 0.5).value
-        )
-        self.max_command_yaw_rate = float(
-            self.declare_parameter('max_command_yaw_rate', 1.0).value
-        )
 
         self._create_state_subscriptions()
         self.cmd_vel_sub = self.create_subscription(
@@ -97,8 +90,6 @@ class PolicyScheduler(Node):
 
     def start_policy_control(self) -> None:
         self.policy_runner.reset_state()
-        with self._state_lock:
-            self._heading_target = self._rpy[2] if self._has_motion_state else None
         self.motor_controller.set_gains(
             kp=self.control_cfg['motor']['kp'],
             kd=self.control_cfg['motor']['kd'],
@@ -109,8 +100,6 @@ class PolicyScheduler(Node):
     def stop_policy_control(self) -> None:
         self._policy_active = False
         self.motor_controller.disable()
-        with self._state_lock:
-            self._heading_target = None
 
     def wait_for_current_joint_angles(self, timeout_sec: float = 2.0) -> list[float] | None:
         deadline = time.monotonic() + timeout_sec
@@ -359,8 +348,6 @@ class PolicyScheduler(Node):
                 float(value) for value in msg.imu_state.gyroscope[0:3]
             ]
             self._rpy = [float(value) for value in msg.imu_state.rpy[0:3]]
-            if self._heading_target is None:
-                self._heading_target = self._rpy[2]
             self._has_motion_state = True
 
     def _on_joint_states(self, msg: JointState) -> None:
@@ -447,14 +434,9 @@ class PolicyScheduler(Node):
         )
         self.get_logger().info(
             f'Loaded policy model: {policy_runner.model_path} on {policy_runner.device_type}; '
-            f'joint_action_scale={policy_runner.action_scale:.6f}, '
-            f'heading_kp={self.heading_control_stiffness:.3f}'
+            f'joint_action_scale={policy_runner.action_scale:.6f}'
         )
         return policy_runner
-
-    @staticmethod
-    def _wrap_to_pi(angle: float) -> float:
-        return math.remainder(angle, 2.0 * math.pi)
 
     @staticmethod
     def _quat_to_rpy(x: float, y: float, z: float, w: float) -> tuple[float, float, float]:
@@ -470,21 +452,6 @@ class PolicyScheduler(Node):
         cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
         yaw = math.atan2(siny_cosp, cosy_cosp)
         return roll, pitch, yaw
-
-    def _build_policy_cmd_vel(self, raw_cmd_vel: list[float], yaw: float) -> list[float]:
-        with self._state_lock:
-            if self._heading_target is None:
-                self._heading_target = float(yaw)
-            self._heading_target = self._wrap_to_pi(
-                self._heading_target + float(raw_cmd_vel[2]) * self.policy_period
-            )
-            heading_error = self._wrap_to_pi(self._heading_target - float(yaw))
-
-        yaw_rate_cmd = max(
-            -self.max_command_yaw_rate,
-            min(self.max_command_yaw_rate, self.heading_control_stiffness * heading_error),
-        )
-        return [float(raw_cmd_vel[0]), float(raw_cmd_vel[1]), float(yaw_rate_cmd)]
 
     def _get_policy_state_snapshot(self) -> dict[str, list[float]] | None:
         with self._state_lock:
@@ -515,9 +482,8 @@ class PolicyScheduler(Node):
             return
 
         try:
-            policy_cmd_vel = self._build_policy_cmd_vel(state['cmd_vel'], state['rpy'][2])
             observation = build_observation(
-                cmd_vel=policy_cmd_vel,
+                cmd_vel=state['cmd_vel'],
                 rpy=state['rpy'],
                 base_linear_velocity=state['base_linear_velocity'],
                 base_angular_velocity=state['base_angular_velocity'],
