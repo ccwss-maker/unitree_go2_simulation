@@ -1,0 +1,12 @@
+float32 lin_vel_x
+float32 lin_vel_y
+float32 yaw_vel
+float32 body_height
+float32 gait_frequency
+float32 gait_phase
+float32 footswing_height
+float32 body_pitch
+float32 body_roll
+float32 stance_width
+float32 stance_length
+uint8 gait_id
