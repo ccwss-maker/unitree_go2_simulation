@@ -113,8 +113,6 @@ class UnitreeLeggedControl(Node):
         self._joint_states_sub = self.create_subscription(
             JointState, '/joint_states', self._on_joint_states, qos_rt)
 
-        self._last_stamp = None  # for dt calculation from stamp
-
         self.get_logger().info('unitree_legged_control started, waiting for /joint_states...')
 
     # ------------------------------------------------------------------
@@ -143,17 +141,6 @@ class UnitreeLeggedControl(Node):
             self.get_logger().info(
                 f'Mapped {len(self._joint_index)} joints from /joint_states.')
 
-        # Compute dt from message stamp
-        stamp = msg.header.stamp
-        current_time = stamp.sec + stamp.nanosec * 1e-9
-        if self._last_stamp is not None:
-            dt = current_time - self._last_stamp
-            if dt <= 0.0 or dt > 0.1:
-                dt = 0.005  # fallback to physics step size
-        else:
-            dt = 0.005  # first iteration, use physics step size
-        self._last_stamp = current_time
-
         for jname, idx in self._joint_index.items():
             st = self._states[jname]
             cmd = st.last_cmd
@@ -161,9 +148,8 @@ class UnitreeLeggedControl(Node):
 
             current_pos = msg.position[idx]
 
-            # --- Compute velocity (same filter as ROS1) ---
-            # vel = lastVel*0.35 + 0.65*(currentPos - lastPos) / dt
-            current_vel = st.dq * 0.35 + 0.65 * (current_pos - st.q) / dt
+            # --- Use physics velocity from joint_states (matches Isaac Lab implicit PD) ---
+            current_vel = msg.velocity[idx] if idx < len(msg.velocity) else 0.0
 
             # --- Process command based on mode ---
             if cmd.mode == PMSM:
